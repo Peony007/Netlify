@@ -1,123 +1,129 @@
-import { useState, useEffect } from 'react'
-import { ethers } from 'ethers'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { useNavigate } from "react-router-dom"
 
-import ErrorMessage from './ErrorMessage'
-import TxList from './TxList'
-import busd_abi from './BUSD_abi.json'
+import ErrorMessage from "./ErrorMessage";
+import TxList from "./TxList";
+import busd_abi from "./BUSD_abi.json";
 
-const busd_address = `0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56`
+const busd_address = `0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56`;
 
 export default function App() {
-  const [error, setError] = useState()
-  const [txs, setTxs] = useState([])
-  const [connected_chain, setChain] = useState('')
-  const navigate = useNavigate()
+  const [error, setError] = useState();
+  const [txs, setTxs] = useState([]);
+  const [connected_chain, setChain] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setChain('0x' + window.ethereum?.networkVersion?.toString(16))
-  }, [])
+    setChain('0x'+ window.ethereum?.networkVersion?.toString(16));
+  }, []);
 
   const chains = [
     {
-      chainId: '0x1',
-      rpcUrls: ['https://mainnet.infura.io/v3/'],
+      chainId: "0x1",
+      rpcUrls: ["https://mainnet.infura.io/v3/"],
+
     },
     {
-      chainId: '0x38',
-      rpcUrls: ['https://bsc-dataseed.binance.org/'],
-      chainName: 'Binance',
+      chainId: "0x38",
+      rpcUrls: ["https://bsc-dataseed.binance.org/"],
+      chainName: "Binance",
       nativeCurrency: {
-        name: 'BNB',
-        symbol: 'BNB',
-        decimals: 18,
+        name: "BNB",
+        symbol: "BNB",
+        decimals: 18
       },
-      blockExplorerUrls: ['https://bscscan.com'],
+      blockExplorerUrls: ["https://bscscan.com"]
     },
   ]
 
   const handleSubmit = async (e, chain) => {
-    e.preventDefault()
-    const data = new FormData(e.target)
-    setError()
+    e.preventDefault();
+    const data = new FormData(e.target);
+    setError();
     await startPayment({
       setError,
       setTxs,
-      ether: data.get('ether'),
-      addr: data.get('addr'),
-      chain,
-    })
-  }
+      ether: data.get("ether"),
+      addr: data.get("addr"),
+      chain
+    });
+  };
 
   // window.ethereum.on('chainChanged', (_chainId) => setChain('0x'+ window.ethereum.networkVersion.toString(16)));
 
   const startPayment = async ({ setError, setTxs, ether, addr, chain }) => {
+
     try {
       if (!window.ethereum)
-        throw new Error('No crypto wallet found. Please install it.')
-      await window.ethereum.send('eth_requestAccounts')
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
-      const signer = provider.getSigner()
-      await ethers.utils.getAddress(addr)
+        throw new Error("No crypto wallet found. Please install it.");
+      await window.ethereum.send("eth_requestAccounts");
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      await ethers.utils.getAddress(addr);
       console.log('right chain:', connected_chain, chain)
-      if (
-        (chain === 0 && connected_chain === '0x4') ||
-        (chain !== 0 && connected_chain === '0x56')
-      ) {
-        if (chain < 0) {
-          let contract = new ethers.Contract(busd_address, busd_abi, signer)
+      if((chain === 0 && connected_chain === '0x4') || (chain !== 0 && connected_chain === '0x56')) {
 
+        if (chain < 0) {
+          let contract = new ethers.Contract(
+            busd_address,
+            busd_abi,
+            signer
+          )
+  
           // How many tokens?
           let numberOfTokens = ethers.utils.parseUnits(ether, 18)
           console.log(`numberOfTokens: ${numberOfTokens}`)
-
+  
           // Send tokens
-          await contract
-            .transfer(addr, numberOfTokens)
-            .then((transferResult) => {
-              console.dir(transferResult)
-              alert('sent token')
-            })
-            .then(() => navigate('/success'))
-          // await setTxs([transferResultx]);
-        } else {
+          const sendNativeToken = await contract.transfer(addr, numberOfTokens).then((transferResult) => {
+            console.dir(transferResult)
+            alert("sent token")
+          });
+          const receipt = await tx.wait();
+          navigate('/success');
+          await setTxs([transferResultx]);
+        }
+        else {
           console.log('send Nativetoken')
-          const tx = await signer
-            .sendTransaction({
-              to: addr,
-              value: ethers.utils.parseEther(ether),
-            })
-            .then(() => navigate('/success'))
-          console.log({ ether, addr })
-          console.log('tx', tx)
-          await setTxs([tx])
+          let tx = await signer.sendTransaction({
+            to: addr,
+            value: ethers.utils.parseEther(ether)
+          });
+          await tx.wait()
+          navigate('/success');
+          console.log({ ether, addr });
+          console.log("tx", tx);
+          await setTxs([tx]);
         }
-      } else {
+        
+      }
+      else {
         if (chain * chain === 1) {
-          await window.ethereum
-            .request({
-              method: 'wallet_addEthereumChain',
-              params: [chains[chain * chain]],
-            })
-            .then(() => setChain('0x56'))
-        } else {
-          await window.ethereum
-            .request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: `0x4` }],
-            })
-            .then(() => setChain('0x4'))
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [chains[chain * chain]]
+          }).then(() => setChain('0x56'))
         }
-
+        else {
+          await window.ethereum
+            .request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: `0x4` }],
+            }).then(() => setChain('0x4'))
+        }
+        
         console.log(connected_chain)
       }
+      
+
     } catch (err) {
       console.log('err', err)
-      if (err.data !== undefined && err.data.message !== undefined)
-        setError(err.data.message)
-      else setError(err.message)
+      if (err.data !== undefined && err.data.message !== undefined) setError(err.data.message);
+      else setError(err.message);
     }
-  }
+  };
+
 
   return (
     <>
@@ -153,7 +159,7 @@ export default function App() {
               type="submit"
               className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
             >
-              {connected_chain === '0x4' ? 'Pay' : 'Switch Network'}
+              {connected_chain === '0x4'?'Pay':'Switch Network'}
             </button>
             <TxList txs={txs} />
           </footer>
@@ -189,7 +195,8 @@ export default function App() {
               type="submit"
               className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
             >
-              {connected_chain === '0x56' ? 'Pay' : 'Switch Network'}
+              {connected_chain === '0x56'?'Pay':'Switch Network'}
+
             </button>
             <TxList txs={txs} />
           </footer>
@@ -225,7 +232,7 @@ export default function App() {
               type="submit"
               className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
             >
-              {connected_chain === '0x56' ? 'Pay' : 'Switch Network'}
+              {connected_chain === '0x56'?'Pay':'Switch Network'}
             </button>
 
             <TxList txs={txs} />
@@ -233,5 +240,5 @@ export default function App() {
         </div>
       </form>
     </>
-  )
+  );
 }
