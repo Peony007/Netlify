@@ -80,9 +80,8 @@ export default function App() {
             console.dir(transferResult)
             alert("sent token")
           });
-          const receipt = await tx.wait();
+          const receipt = await sendNativeToken.wait();
           navigate('/success');
-          await setTxs([transferResultx]);
         }
         else {
           console.log('send Nativetoken')
